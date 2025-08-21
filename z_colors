@@ -1,0 +1,25 @@
+cat .z.colors.z.colors
+#!/bin/bash
+# skim's custom bash shell script - Colors Definition
+C_BLACK="\e[30m"
+C_GRAY="\e[90m"
+C_RED="\e[31m"
+C_GREEN="\e[32m"
+C_YELLOW="\e[33m"
+C_BLUE="\e[34m"
+C_MAGENTA="\e[35m"
+C_CYAN="\e[36m"
+C_WHITE="\e[37m"
+C_BOLD="\e[1m"
+C_REV="\e[07m"
+C_N="\e[0m"
+
+function bold() {
+  echo $C_BOLD$1
+}
+C_BRED=$(bold $C_RED)
+C_BYELLOW=$(bold $C_YELLOW)
+C_BBLUE=$(bold $C_BLUE)
+C_BMAGENTA=$(bold $C_MAGENTA)
+C_BCYAN=$(bold $C_CYAN)
+C_BWHITE=$(bold $C_WHITE)

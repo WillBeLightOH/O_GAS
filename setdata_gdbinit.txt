@@ -1,0 +1,193 @@
+# 1-3-4
+define setData1
+    set $nI=0
+
+    while ($nI < 5)
+    set iniAlmHost[$nI].kansiHostNo=$nI+1
+
+      if ($nI == 0)
+        set iniAlmHost[$nI].redFCnt=5
+        set iniAlmHost[$nI].redCnt=5
+      end
+
+      if ($nI == 1)
+        set iniAlmHost[$nI].yelFCnt=5
+        set iniAlmHost[$nI].yelCnt=5
+      end
+
+      if ($nI == 2)
+        set iniAlmHost[$nI].redFCnt=0
+        set iniAlmHost[$nI].redCnt=5
+      end
+
+      if ($nI == 3)
+        set iniAlmHost[$nI].yelFCnt=0
+        set iniAlmHost[$nI].yelCnt=5
+      end
+
+      if ($nI == 4)
+        set iniAlmHost[$nI].grnCnt=5
+      end
+
+      set $nI=$nI+1
+    end
+
+    set iniAlmHost[$nI].kansiHostNo=0
+    p iniAlmHost
+end
+
+# 1-3-5
+define setData2
+    set $nI=0
+
+    while ($nI < 5)
+    set iniAlmHost[$nI].kansiHostNo=$nI+1
+
+      if ($nI == 0)
+        set iniAlmHost[$nI].redFCnt=5
+        set iniAlmHost[$nI].redCnt=5
+      end
+
+      if ($nI == 1)
+        set iniAlmHost[$nI].yelFCnt=0
+        set iniAlmHost[$nI].yelCnt=5
+      end
+
+      if ($nI == 2)
+        set iniAlmHost[$nI].redFCnt=0
+        set iniAlmHost[$nI].redCnt=5
+      end
+
+      if ($nI == 3)
+        set iniAlmHost[$nI].yelFCnt=0
+        set iniAlmHost[$nI].yelCnt=5
+      end
+
+      if ($nI == 4)
+        set iniAlmHost[$nI].grnCnt=5
+      end
+
+      set $nI=$nI+1
+    end
+
+    set iniAlmHost[$nI].kansiHostNo=0
+    p iniAlmHost
+end
+
+# 1-3-6
+define setData3
+    set $nI=0
+
+    while ($nI < 5)
+      set iniAlmHost[$nI].kansiHostNo=$nI+1
+
+      # 確認済み「重故障」
+      if ($nI == 0)
+        set iniAlmHost[$nI].yelFCnt=0
+        set iniAlmHost[$nI].yelCnt=0
+        set iniAlmHost[$nI].grnCnt=0
+
+        set iniAlmHost[$nI].redFCnt=0
+        set iniAlmHost[$nI].redCnt=5
+      end
+
+      # 確認済み「軽故障」
+      if ($nI == 1)
+        set iniAlmHost[$nI].redFCnt=0
+        set iniAlmHost[$nI].redCnt=0
+        set iniAlmHost[$nI].grnCnt=0
+
+        set iniAlmHost[$nI].yelFCnt=0
+        set iniAlmHost[$nI].yelCnt=5
+      end
+
+      # 未確認「復帰」
+      if ($nI == 2)
+        set iniAlmHost[$nI].redFCnt=0
+        set iniAlmHost[$nI].redCnt=0
+        set iniAlmHost[$nI].yelFCnt=0
+        set iniAlmHost[$nI].yelCnt=0
+
+        set iniAlmHost[$nI].grnCnt=5
+      end
+
+      # 未確認「軽故障」
+      if ($nI == 3)
+        set iniAlmHost[$nI].redFCnt=0
+        set iniAlmHost[$nI].redCnt=0
+        set iniAlmHost[$nI].grnCnt=0
+
+        set iniAlmHost[$nI].yelFCnt=5
+        set iniAlmHost[$nI].yelCnt=5
+      end
+
+      # 未確認「復帰」
+      if ($nI == 4)
+        set iniAlmHost[$nI].redFCnt=0
+        set iniAlmHost[$nI].redCnt=0
+        set iniAlmHost[$nI].yelFCnt=0
+        set iniAlmHost[$nI].yelCnt=0
+
+        set iniAlmHost[$nI].grnCnt=5
+      end
+
+      set $nI=$nI+1
+    end
+
+    set iniAlmHost[$nI].kansiHostNo=0
+    p iniAlmHost
+end
+
+# 1-3-7
+define setData4
+    set $nI=0
+
+    while ($nI < 2)
+      set iniAlmHost[$nI].kansiHostNo=$nI+1
+
+      # 確認済み「重故障」
+      if ($nI == 0)
+        set iniAlmHost[$nI].yelFCnt=0
+        set iniAlmHost[$nI].yelCnt=0
+        set iniAlmHost[$nI].grnCnt=0
+
+        set iniAlmHost[$nI].redFCnt=0
+        set iniAlmHost[$nI].redCnt=5
+      end
+
+      # 確認済み「軽故障」
+      if ($nI == 1)
+        set iniAlmHost[$nI].redFCnt=0
+        set iniAlmHost[$nI].redCnt=0
+        set iniAlmHost[$nI].grnCnt=0
+
+        set iniAlmHost[$nI].yelFCnt=0
+        set iniAlmHost[$nI].yelCnt=5
+      end
+
+      set $nI=$nI+1
+    end
+
+    set iniAlmHost[$nI].kansiHostNo=0
+    p iniAlmHost
+end
+
+# 1-3-8
+define setData5
+    set $nI=0
+
+    while ($nI < 1)
+        set iniAlmHost[$nI].kansiHostNo=$nI+1
+
+        # 未確認「復帰」
+        set iniAlmHost[$nI].redFCnt=0
+        set iniAlmHost[$nI].redCnt=0
+        set iniAlmHost[$nI].yelFCnt=0
+        set iniAlmHost[$nI].yelCnt=0
+        set iniAlmHost[$nI].grnCnt=0
+        set $nI=$nI+1
+    end
+
+    set iniAlmHost[$nI].kansiHostNo=0
+    p iniAlmHost
+end

@@ -1,0 +1,146 @@
+cat .z.util.z.util
+#!/bin/bash
+# .z.util - bash utility functions
+source /usr2/project/work/skim/.z.colors
+
+#==================================================================================================
+# get color value
+#--------------------------------------------------------------------------------------------------
+function get_color() {
+  case "$1" in
+    R) c=$C_RED;;
+    G) c=$C_GREEN;;
+    B) c=$C_BLUE;;
+    Y) c=$C_YELLOW;;
+    C) c=$C_CYAN;;
+    M) c=$C_MAGENTA;;
+    *) c=$C_WHITE;;
+  esac
+  echo $c
+}
+
+#==================================================================================================
+# print a title line
+#--------------------------------------------------------------------------------------------------
+function p_title() {
+  clrm=$1
+  main=$2
+  clrs=$3
+  sub=$4
+  em=$C_BOLD
+  c1=$(get_color $clrm)
+  c2=$(get_color $clrs)
+  printf "$c1***********<< $em$main$C_N $c1>>$C_N  $c2$sub$C_N\n" 
+}
+
+#==================================================================================================
+# print a line
+#   $1  $2                    $3     $4      $5
+# p _|B cmd|vim|gdb|tosh|path prompt command description
+#--------------------------------------------------------------------------------------------------
+function p() {
+  attr=$1
+  typ=$2
+  pmt=$3
+  cmd=$4
+  desc=$5
+  if [ "$attr" = "B" ]; then
+    em=$C_BOLD
+  else
+    em=""
+  fi
+  if [[ -z "$cmd" || -z "$desc" ]]; then
+    dl=" "
+  else
+    dl=":"
+  fi
+  case $typ in
+    c)    c1=$em$C_GREEN; c2=$c1;       c3=$C_WHITE;   n1="-8";;
+    cmd)  c1=$C_GREEN;    c2=$c1;       c3=$C_WHITE;   n1="-18";;
+    vim)  c1=""           c2=$C_YELLOW; c3=$C_WHITE;   n1="-18";;
+    gdb)  c1=$C_CYAN;     c2=$C_BLUE;   c3=$C_WHITE;   n1="-33";;
+    tosh) c1=$C_BLUE;     c2=$c1;       c3=$C_WHITE;   n1="-36";;
+    path) c1=$C_BLUE;     c2=$c1;       c3=$C_MAGENTA; n1="-36";;
+    bash) c1=$C_CYAN;     c2=$c1;       c3=$C_WHITE;   n1="-36";;
+  esac
+#----------------------------------------------------------------
+  printf "$c1%s$em$c2%${n1}s$C_N$dl $em$c3%s$C_N\n" "$pmt" "$cmd" "$desc"
+#----------------------------------------------------------------
+}
+
+#==================================================================================================
+# print to do
+# B - Bold, H - Holliday
+# ptd _ 06/13 金 08:20-18:30 "8.3.1(4)LTE回線の局間に7ms遅延時間を設ける 実装・単体試験" "gwmdpsnd"
+# ptd _ 06/14 土 .           ""
+# ptd _ 06/15 日 -           ""
+#--------------------------------------------------------------------------------------------------
+function ptd() {
+  attr=$1
+  mmdd=$2
+  dow=$3
+  tm=$4
+  cmt=$5
+  kwd=$6
+  today=$(date +"%m/%d")
+  if [ "$mmdd" = "$today" ]; then
+    mark="→"
+    em=$C_BOLD
+  else
+    if [ "${mmdd:3:2}" = "01" ]; then
+      mark="◇"
+    else
+      mark="  "
+    fi 
+    em=""
+  fi
+  case "$3" in
+    土) c1=$C_BBLUE; c2=$c1;      c3=$C_CYAN;  c4=$C_YELLOW; ct=$C_BBLUE;;
+    日) c1=$C_BRED;  c2=$c1;      c3=$C_CYAN;  c4=$C_YELLOW; ct=$C_BRED;;
+    *)  c1=$C_GREEN; c2=$C_WHITE; c3=$C_WHITE; c4=$C_CYAN;   ct=$C_WHITE;;
+  esac
+  case "$attr" in
+    B)  em=$C_BOLD;; 
+    H)  c2=$C_RED; ct=$c2;;
+  esac
+#----------------------------------------------------------------
+  printf "$em$c1$mark$mmdd$em$c2%3s$C_N " "$dow"
+#----------------------------------------------------------------
+  if [ ${#tm} -lt 2 ]; then
+    case "$3" in
+      土) tm="."; ct=$C_BLUE;;
+      日) tm="_"; ct=$C_RED;;
+      *)
+        if [ -z "$tm" ]; then
+          tm="_"
+        fi;;
+    esac
+  #----------------------------------------------------------------
+    printf "$em$ct"
+    printf "${tm}%.0s" $(seq 1 11)
+  #----------------------------------------------------------------
+  else
+    tmS=${tm:0:5}
+    tmE=${tm:6:5}
+    if [ "$tmS" = "00:00" ]; then
+      ctS=$C_GRAY
+    else
+      ctS=$ct
+    fi
+    if [ "$tmE" = "00:00" ]; then
+      ctE=$C_GRAY
+    else
+      ctE=$ct
+    fi
+  #----------------------------------------------------------------
+    printf "$em$ctS%s$C_GRAY-$em$ctE%s" $tmS $tmE
+  #----------------------------------------------------------------
+    # future
+    if [ "$tmS" = "00:00" ] && [ "$tmE" = "00:00" ]; then
+      c3=$C_GREEN
+    fi
+  fi
+#----------------------------------------------------------------
+  printf "$C_N $em$c3%-70s$C_N $em$c4$kwd$C_N\n" "$cmt"
+#----------------------------------------------------------------
+}

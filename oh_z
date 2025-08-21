@@ -1,0 +1,557 @@
+#!/bin/bash
+# skim's Task Management shell script, May.2025
+# v0.1.0 2025/07/10 added helps, chmod 644 .z (should not be run directly)
+#------------------------------------------------------------------------------
+# $ h for Help
+# 1. Task-based Workflow Organization: t*, tl, ti
+# 2. Navigation with Tasks: g
+# 3. vim, vimdiff enhancements: v*, vdt
+# 4. Files handling: fl, fnf
+#------------------------------------------------------------------------------
+# Run for each session (when you're not allowed to change ~/.bashrc)
+# $ . .z or $ zz (once .z is loaded)
+# env
+GW_HOST=192.168.15.14
+SKIM="/usr2/project/work/skim"
+SEILOH="/usr2/project/work/seiloh"
+TCSBIN="/usr2/project/tcsworks/urfs/bin"
+SCADA="/usr2/project/scada"
+APP="$SCADA/usrapp"
+DTEIN="$SCADA/dtein"
+DTETEST="$DTEIN/dtecom/dte_TEST"
+LOG_DIRECTORY="/usr2/project/platform/tntad/log/user"
+SKTASKLIST="$SKIM/sktaskhist.$(hostname).log"
+TASHIP_T_DIR=~/platform/syscon/cfg
+TCSWORKS_T_DIR=~/tcsworks/tskmng/text
+export PATH="$PATH:$SKIM:$SEILOH:$TCSBIN"
+export LC_ALL=ja_JP.eucJP
+#==============================================================================
+# Dependencies 
+#------------------------------------------------------------------------------
+source $SKIM/.z.colors  # Colors definitions
+source $SKIM/.z.tasks   # Task info registration
+source $SKIM/.z.util    # formatted print
+# $SKIM/.vimrc
+#------------------------------------------------------------------------------
+# functions
+# show path line by line
+function v() {
+  if [[ "$1" = "h" ]]; then
+    v_help
+  else
+    vim -u $SKIM/.vimrc "$@"
+  fi
+}
+function vdiff() {
+  vimdiff -u $SKIM/.vimrc "$@"
+}
+function sp() {
+  echo $PATH | sed 's/:/\n/g'
+}
+function ssp() {
+  echo $1 | sed 's/ /\n/g'
+}
+function tasknum() {
+  if [ -f "$SKTASKLIST" ]; then
+    tail -n 1 $SKTASKLIST | awk '{print $4}'
+  else
+    echo 0
+  fi
+}
+function taskname() {
+  if [ $# -lt 1 ]; then
+    tskn=$(tasknum)
+  else
+    tskn=$1
+  fi
+  echo "${SKTASKS[$tskn]}"
+}
+function taskdir() {
+  if [ $# -lt 1 ]; then
+    tskn=$(tasknum)
+  else
+    tskn=$1
+  fi
+  echo "${SKTASKDIRS[$tskn]}"
+}
+function taskstat() {
+  if [ $# -eq 1 ]; then
+    if [[ "$1" = "a" ]]; then
+      systaskstat -s
+    else
+      systaskstat -s | grep $1
+    fi
+  else
+    systaskstat -s | grep $(taskname)
+  fi
+}
+function addtasklist() {
+  if [ $# -lt 1 ]; then
+    echo No task number specified!
+    return -1
+  fi
+  if [[ $(tasknum) != $1 || $# > 1 ]]; then
+    task_line="$(date '+%Y/%m/%d(%a) %H:%M:%S') $(taskname $1) $1"
+    if [ $# -gt 1 ]; then
+      echo -e "$task_line \"$2\"" >> $SKTASKLIST
+    else
+      echo $task_line >> $SKTASKLIST
+    fi
+    echo "Added $task_line"
+  fi
+}
+# arguments: row tskn
+function printtask() {
+  if [[ "$1" = "$2" ]]; then
+    c1=$C_BRED
+    c2=$C_WHITE
+  else
+    c1=$C_GREEN
+    c2=$C_WHITE
+  fi
+  hostnm=$(taskhost $1)
+  if [ "$hostnm" = "hsgwoa" ]; then
+    c3=$C_BLUE
+  else
+    c3=$C_YELLOW
+  fi
+  printf "$c1%3s $C_REV$c3%2s$C_N $c1%-18s $c2%s$C_N\n" $1 ${hostnm:2:2} ${SKTASKS[$1]} "${SKTASKNAMES[$1]}"
+}
+function tasklist() {
+  if [ $# -gt 0 ]; then
+    if [[ "$1" = "a" ]]; then
+      cat -n $SKTASKLIST
+    else
+      tail -n $1 $SKTASKLIST
+    fi
+    return 0
+  fi
+  tskn=$(tasknum)
+  row=1
+  while [ $row -lt ${#SKTASKS[@]} ]; do
+    printtask $row $tskn
+    ((row++))
+  done
+}
+function taskinfo() {
+  tskn=$(tasknum)
+  if [ $# -gt 0 ]; then
+    row=$1
+  else
+    row=$tskn
+  fi
+  if [ $row -lt ${#SKTASKS[@]} ]; then
+    printtask $row $tskn
+    tlfile="$SKIM/sktaskhist.$(taskhost $row).log"
+    cat -n $tlfile | grep ${SKTASKS[$row]}
+  else
+    echo Task number out of range. $((${#SKTASKS[@]}-1)) tasks!
+  fi
+}
+function taskfiles() {
+  l $(taskname)*
+  printf "Backup source code with ${C_GREEN}bkc$C_N\n"
+}
+function list_taskname() {
+  ls -la $(taskname)*
+}
+function log_taskname() {
+  LOGNUM=$(date +%u)
+  echo "$(taskname)-$LOGNUM.log"
+}
+function log_filename() {
+  echo "$LOG_DIRECTORY/$(log_taskname)"      
+}   
+# build current task
+function build_task() {
+  if [ $# -eq 1 ]; then
+    makefile=Makefile.$1
+  else
+    if [ $(tasknum) -lt 19 ]; then
+      make -B
+      return
+    fi
+    makefile=Makefile.$(taskname)
+  fi
+  make -f $makefile clean
+  make -f $makefile
+}
+# go to task #tasknumber (with comment)
+function goto_task() {
+  if [ $# -lt 1 ]; then
+    echo "Specify task number!"
+    return -1
+  fi
+  TASKNM=$(taskname $1)
+  if [ -n "$TASKNM" ]; then 
+    thost=$(taskhost $1)
+    if [ $(hostname) != $thost ]; then
+      taskinfo $1
+      echo -e "--> Go to $C_YELLOW$thost:$C_GREEN${SKTASKDIRS[$1]}$C_N"
+      return 1
+    fi 
+    if [[ "$2" = "c" || "$2" = "cd" ]]; then
+      echo "Changing directory without changing current task($(taskname))"
+      taskinfo $1
+      cd ${SKTASKDIRS[$1]}
+    else
+      addtasklist $1 "$2"
+      taskinfo
+      cd $(taskdir)
+    fi
+  else
+    echo "Invalid task number!"
+  fi
+}
+function gotoHULFT() {
+  hn=$(hostname)
+  if [ "$hn" != "hsifoa" ]; then
+    echo "$hn now: m_scoa → cmpsvr → hsifoa"
+    return
+  fi
+  cd ~/ifsvr/hulft/setting/
+  ps -ef | grep -e hul | grep -v grep
+  echo ">> Run hulft_task.sh admin (suで実行)"
+}
+function gotoserver() {
+  hn=$(hostname)
+  if [ "$1" = "$hn" ]; then
+    echo Already in $1
+    return
+  fi
+  if { [ "$1" = "hsifoa" ] && [ "$hn" != "cmpsvr" ]; } || { [ "$1" = "cmpsvr" ] && [ "$hn" != "m_scoa" ]; }; then
+    echo "$hn now: m_scoa → cmpsvr → hsifoa"
+    return
+  fi
+  echo -e 《《 Run \$. .z after logged in. 》》
+  ssh $1
+}
+function g() {
+  if [ $# -lt 1 ]; then
+    taskinfo
+    cd $(taskdir)
+    return 0
+  fi  
+  case $1 in
+    h)        g_help;;
+    add|commit|status) git $@;;
+    app)      cd $APP;;
+    sk)       cd $SKIM;;
+    doc)      cd $SKIM/doc; ls -la;;
+    ssh)      cd .ssh;;
+    i|I|inc)  cd $APP/include;;
+    l|L|lib)  cd $SCADA/dbchecktool/libsrc;;
+    dtei)     cd $DTEIN/include;;
+    dtet)     cd $DTETEST;;
+    tabin)    cd $HOME/platform/tntad/bin;;
+    ta)       cd $TASHIP_T_DIR;;
+    tw)       cd $TCSWORKS_T_DIR;;
+    data)     cd $SCADA/data;;
+    test)     cd $SKIM/test; ls -la;;
+    log)      echo "$(date) ==> $(log_taskname)"; cd $LOG_DIRECTORY; list_taskname;;
+    hul) gotoHULFT;;
+    sc)  gotoserver hsscoa;;
+    gw)  gotoserver hsgwoa;;
+    if)  gotoserver hsifoa;;
+    cm)  gotoserver cmpsvr;;
+    m)   goto_task $(tasknum) "$2";;
+    *)   goto_task $1 "$2";;
+  esac
+}
+function g_help() {
+  p_title "g: go utility" "[h: help]"
+  p B c "g " "(n m|cd)"     "cd to the task number (or current) with m:comment|cd:just cd"
+  p B c "g " "m"            "message(comment) on the current task"
+  p _ c "g " "app"          "\$APP dir"
+  p B c "g " "sk"           "\$SKIM dir"
+  p _ c "g " "doc"          "\$SKIM doc dir"
+  p _ c "g " "ssh"          ".ssh dir"
+  p _ c "g " "i|inc"        "\$APP/include"
+  p _ c "g " "l|lib"        "\$SCADA/dbchecktool/libsrc"
+  p _ c "g " "dtei"         "dte include: $DTEIN/include"
+  p _ c "g " "dtet"         "dte test: $DTETEST"
+  p _ c "g " "tabin"        "TASHIP bin: ~/platform/tntad/bin"
+  p B c "g " "ta"           "TASHIP: $TASHIP_T_DIR"
+  p B c "g " "tw"           "TCSWORKS: $TCSWORKS_T_DIR"
+  p _ c "g " "data"         "$SCADA/data"
+  p _ c "g " "test"         "$SKIM/test"
+  p _ c "g " "log"          "log output: $LOG_DIRECTORY"
+  p _ c "g " "sc|gw|if|cm"  "hsscoa|hsgwoa|hsifoa|cmpsvr server"
+}
+function v_help() {
+  p_title "v*: vim tasks; vimdiff;" "[h: help]"
+  p B c "vz   " " "         "bashrc - $SKIM/.z"
+  p _ c "vv   " " "         "vim script - $SKIM/.vimrc"
+  p _ c "vh   " " "         "help - $SKIM/hlp"
+  p B c "vw   " " "         "work - current task's c"
+  p _ c "vc   " " "         "c in the current dir"
+  p _ c "vo   " " "         "open recent file"
+  p _ c "vg   " "(l|g|f)"   "GDB: .gdbinit (local|global|file copy and edit)"
+  p _ c "vskt " "(b)"       "skimtest.c (b)uild: make -f Makefile.skim"
+  p B c "vt   " " "         "task list - $SKTASKLIST"
+  p _ c "vt   " "ta"        "TASHIP tasks - $TASHIP_T_DIR/systaskd.txt"
+  p _ c "vt   " "shm|sem|msg" "TASHIP shared memory|semaphore|message queue"
+  p _ c "vt   " "tw"        "TCSWORKS tasks - $TCSWORKS_T_DIR/tregapl.txt"
+  p B c "vt   " "td"        "To Do List - $SKIM/tdl"
+  p _ c "vt   " "c"         "color definitions - $SKIM/.z.colors"
+  p _ c "vt   " "doc"       "doc - $SKIM/doc"
+  p _ c "vt   " "util"      "utilities - $SKIM/.z.util"
+  p B c "vt   " "t"         "task definitions - $SKIM/.z.tasks"
+  p _ c "vt   " "bk"        "backup codes script - $SKIM/bkcode"
+  p B c "vt   " "fnf"       "file info script - $SKIM/fnf"
+  p B c "vt   " "memo"      "memo - $SKIM/doc/memmo.md"
+  p B c "vt   " "tasks"     "tasks - $SKIM/doc/tasks.md"
+  p _ c "vl   " " "         "log file of the current task"
+  p B c "vlx  " "(g)"       "listening current log; (g)rep current log"
+  p B c "vdt  " "(n)"       "vimdiff current task with timestamped (n) files"
+  p _ c "vdf  " "f (n)…"   "vimdiff (n) recent files of f.*"
+  p _ c "vdl  " "f f.ts…"  "vimdiff files list"
+}
+function vt() {
+  if [ $# -eq 1 ]; then
+    case $1 in
+      h)    v_help;;
+      ta)   v $TASHIP_T_DIR/systaskd.txt;;
+      taskd|shm|sem|msg)
+            v $TASHIP_T_DIR/sys$1.txt;;
+      tw)   v $TCSWORKS_T_DIR/tregapl.txt;;
+      td)   v + $SKIM/td;;
+      c)    v $SKIM/.z.colors;;
+      util) v $SKIM/.z.util;;
+      t)    v $SKIM/.z.tasks;;
+      bk)   v $SKIM/bkcode;;
+      fnf)  v $SKIM/fnf;;
+      doc)  v $SKIM/doc/;;
+      memo|tasks)
+            v $SKIM/doc/$1.md;;
+    esac
+  else
+    v $SKTASKLIST
+  fi
+}
+function vw() {
+  v $(taskdir)/$(taskname).c "$@"
+}
+# edit recent c source in the current directory
+function vc() {
+  v $(ls -t *.c | head -n 1) "$@"
+}
+function vexist() {
+  if [ -e "$1" ]; then
+    v $1 
+  else
+    if [ -e "$2" ]; then
+      v $2
+    else
+      echo "File($1) does not exist."
+    fi
+  fi
+}
+# view log
+function vl() {
+  log_taskname
+  if [ -e $(log_filename) ]; then
+    if [ $# -eq 1 ]; then
+      LINES=$1
+    else
+      LINES=100
+    fi
+    tail -n $LINES $(log_filename)  
+  else
+    echo "File does not exist."
+  fi
+}
+# view log with grep, or monitor changes
+function vlx() {
+  log_taskname
+  if [ -e $(log_filename) ]; then
+    if [ $# -eq 1 ]; then
+      grep $1 $(log_filename)
+    else
+      tail -f $(log_filename)
+    fi
+  elset
+    echo "File does not exist."
+  fi
+}
+# .gdbinit
+function vg() {
+  if [ $# -eq 1 ]; then
+    case $1 in
+      h) v_help;;
+      g) v $SKIM/gdb/.gdbinit;;
+      l) v $SKIM/gdb/local.gdbinit;;
+      f) cp $SKIM/gdb/local.gdbinit .gdbinit;
+         ls *.c >> .gdbinit;
+         v .gdbinit;;
+    esac
+  else
+    vexist .gdbinit
+  fi
+}
+# vdf f n (upto n files to be compared)
+function vdf() {
+  if [ $# -lt 1 ]; then
+    echo Enter filename! 
+    return -1
+  fi
+  fn=$1
+  if [ $# -lt 2 ]; then
+    cnt=1
+  else
+    cnt=$2
+  fi
+  otherfn=$(ls -t $fn.* | head -n $cnt)
+  if [ -z "$otherfn" ]; then
+    echo "No file to compare!"
+    return -1
+  fi
+  vdiff $fn $otherfn
+}
+function vdt() {
+  vdf $(taskname).c "$@"
+}
+# vdl f f.timestamp …
+function vdl() {
+  if [ $# -lt 1 ]; then
+    echo Enter other files list to compare. vdl f f.timestamp …
+    return -1
+  fi
+  fn=""
+  for arg in "$@"; do
+    if [ -z "$fn" ]; then
+      fn="$arg"
+    else
+      fn="$fn $1.$arg"
+    fi
+  done
+  vdiff $fn
+}
+function pst() {
+#include "tcsworks/pdms/include/psfile.h"
+  ps -eF | grep -E "disc|mrty" 
+}
+function vskt() {
+  g dtet
+  if [[ "$1" = "b" ]]; then
+    make -f Makefile.skim clean
+    make -f Makefile.skim
+  else
+    v skimtest.c
+  fi
+}
+function gdbt() {
+  gdb $(taskname)
+}
+# message queue: specify message queue name such as MSDTE04
+function ipcq() {
+  if [ $# -eq 1 ]; then
+    mqid=$(skt $1)
+    if [ -n "$mqid" ]; then
+      ipcs -q | grep $mqid
+    else
+      echo Message queue of key=[$1] NOT FOUND!
+    fi
+  fi
+  ipcs -uq
+}
+# find_last modified files: 1) within days 2) depth
+function find_last() {
+  depth=2
+  days=1
+  if [ $# -gt 0 ]; then
+    days=$1
+    if [ $# -gt 1 ]; then
+      depth=$2
+    fi
+  fi
+  find . -maxdepth $depth -mtime -$days -exec ls --color -ld {} +
+}
+function sk_sync() {
+  sed -i '$d' $SKIM/.z
+  echo "echo \"zz reloaded - version:$(date)\"" >> $SKIM/.z
+  hn=$(hostname)
+  upgw=0
+  case "$hn" in
+    hsgwoa) otherHost="hsscoa"; upgw=1;;
+    hsscoa) otherHost="hsgwoa"; upgw=1;;
+    m_scoa) otherHost="cmpsvr";;
+    cmpsvr) otherHost="hsifoa";;
+    hsifoa) otherHost="cmpsvr";;
+    *)      echo "Unknown server! $hn"; return;;
+  esac
+  if [[ -z "$otherHost" ]]; then
+    echo Unknown server!
+    return -1
+  fi
+  if [ "$1" = "p" ]; then  #push
+    echo "Pushing $SKIM"
+    rsync -av -u --exclude='*.swp' $SKIM $otherHost:~/work/
+    return 0
+  fi
+  if [ "$1" = "f" ]; then  #fetch
+    echo "Fetching $SKIM"
+    rsync -av -u --exclude='*.swp' $otherHost:$SKIM ~/work/
+    return 0
+  fi
+  echo 《《 Synchronizing .z file 》》
+  echo "cp -p $SKIM/.z ~/"
+  cp -p $SKIM/.z ~/
+  if [ $upgw -eq 1 ]; then
+    echo "scp -p $SKIM/.z $GW_HOST:~/"
+    scp -p $SKIM/.z $GW_HOST:~/
+    scp -p $SKIM/.z $GW_HOST:$SKIM/
+  fi
+  echo "scp -p ~/.z $otherHost:~/"
+  scp -p ~/.z $otherHost:~/
+  echo "scp -p $SKIM/.z $otherHost:$SKIM/"
+  scp -p $SKIM/.z $otherHost:$SKIM/
+  source .z
+}
+function tasklist_info() {
+  tasklist
+  echo "… $(date)"
+  taskinfo
+}
+# backup c source with timestamp
+function bkc() {
+  if [ $# -eq 1 ]; then
+    fn=$1.c
+  else
+    fn=$(taskname).c
+  fi
+  ts=$(date -r $fn '+%Y%m%d')
+  cp -p $fn $fn.$ts
+  echo ">> $fn saved to $fn.$ts"
+  l $fn*
+}
+# aliases
+alias vo="v -c \"'0\""
+alias vz="v $SKIM/.z"
+alias vv="v $SKIM/.vimrc"
+alias vh="v $SKIM/hlp"
+alias vm="vexist Makefile makefile"
+alias va="v $APP/"
+alias vs="v -S $SKIM/session.vim"
+alias vtd="vt td"
+alias zs=sk_sync
+alias zz=". .z"
+alias x=exit
+alias c=clear
+alias tn=taskname
+alias tl=tasklist
+alias ti=taskinfo
+alias tf=taskfiles
+alias tp="printtask $(tasknum)"
+alias tli=tasklist_info
+alias logf=log_filename
+alias xxdl="xxd -l 0x300"
+alias skt="$DTETEST/skimtest"
+alias fl=find_last
+alias bt=build_task
+alias h=hlp
+alias gs="git status"
+alias gl="git logg -n 20"
+alias grepc='grep -r --include="*.c" --include="*.h"'
+# DO NOT DELETE - Final line is maintained by sk_sync()
+echo "zz reloaded - version:2025年  8月 19日 火曜日 11:25:28 JST"
