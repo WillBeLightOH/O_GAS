@@ -1,0 +1,33 @@
+git --version
+git config --global --add safe.directory \\10.45.86.207\gas\unis_work\10_JOB\大阪ガス\git.wk\大阪ガス_2025_ルナソラ更新_サーバ開発\hsscoa.git
+git config --global --add safe.directory \\10.45.86.207\gas\unis_work\10_JOB\大阪ガス\git.wk\大阪ガス_2025_ルナソラ更新_サーバ開発\hsgwoa.git
+
+cd C:\Repo
+git clone \\10.45.86.207\gas\unis_work\10_JOB\大阪ガス\git.wk\大阪ガス_2025_ルナソラ更新_サーバ開発\hsscoa.git
+
+cd C:\Repo\hsscoa
+git pull
+
+
+git remote -v
+git status
+git push
+
+PS C:\Repo\hsscoa> cd ~/
+PS C:\Users\gas> dir
+
+
+\\10.45.86.207\gas\unis_work\personal\seiloh\repo\hsscoa\usr2\project\scada\usrapp\libsubmdpapi\test_src
+C:\Repo\hsscoa\usr2\project\scada\usrapp\libsubmdpapi\test_src
+
+
+
+C:\Repo\hsscoa>git remote -v
+origin  \\10.45.86.207\gas\unis_work\10_JOB\大阪ガス\git.wk\大阪ガス_2025_ルナソラ更新_サーバ開発\hsscoa.git (fetch)
+origin  \\10.45.86.207\gas\unis_work\10_JOB\大阪ガス\git.wk\大阪ガス_2025_ルナソラ更新_サーバ開発\hsscoa.git (push)
+
+
+git status
+git pull
+
+git log
