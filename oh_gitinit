@@ -1,0 +1,92 @@
+$ cat .gdbinit.gdbinit
+# skim 2025/05/26
+# GDB init settings calling order
+# 1. $HOME/.gdbinit
+# 2. ./.gdbinit  (should contain the following)
+# 3.   source ~/work/skim/gdb/.gdbinit 
+# 4.     source ~/work/skim/gdb/gdb_cutom.py
+# 2025/05/28 Added python code
+###################################
+
+# GDB user-defined functions
+
+# skip next
+define cb
+  tbreak $arg0
+  continue 
+end
+
+# skip next
+define sn
+  tbreak +1
+  jump +1
+end
+
+# previous one step
+define prev
+  tbreak -1
+  jump -1
+end
+
+# jump with break
+define jb
+  tbreak $arg0
+  jump $arg0
+end
+
+# set nRet=value
+define nR
+  if $argc == 0
+    set nRet=0
+  end
+  if $argc == 1
+    set nRet=$arg0
+  end
+  p nRet
+end
+
+# print nRet
+define pR
+  if nRet == 0
+    p "NORMAL(0)"
+  end
+  if nRet != 0
+    p nRet
+  end
+end
+
+# print char*
+define pz
+  print (char*)$arg0
+end
+
+# set print pretty
+define spp
+  set print pretty $arg0
+end
+
+# set start time
+define st
+  python st=time.time()
+  python dt=datetime.datetime.fromtimestamp(st)
+  python print("%s Started..." % dt.strftime("%Y-%m-%d %H:%M:%S"))
+  cont
+end
+
+# print elapsed time
+define pt
+  python et=time.time()
+  python dt=datetime.datetime.fromtimestamp(et)
+  python print("%s now -> %.3f seconds elapsed." % (dt.strftime("%Y-%m-%d %H:%M:%S"), et-st))
+end
+
+help user-defined
+###################################
+
+set pagination off
+set print pretty on
+python import time, datetime
+
+source /usr2/project/work/skim/gdb/gdb_custom.py
+[25-08-25 10:31:33] gas@hsscoa[(TDSL) RHEL9.4 ][53338] ~/work/skim/gdb/
+$ 
