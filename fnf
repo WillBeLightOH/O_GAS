@@ -1,0 +1,211 @@
+cat fnf
+#!/bin/bash
+# fnf: fileinfo
+source ~/work/skim/.z.colors
+
+SCADA1="/usr1/project/scada"
+SCADA="/usr2/project/scada"
+SDATA="$SCADA/data"
+DEF_OLD="$SDATA/defBackup"
+#DEF_CNV="$SDATA/cnv/test"
+DEF_CNV="$SDATA"
+FILDIR="/usr1/project/tcsworks/pdms/file"
+FUNCPATH="/usr1/project/scada/funcacc/data"
+
+declare -a FPATHS=(""
+  "$DEF_OLD/FTCCHKIDX"
+  "$DEF_OLD/FTCCOMPTNIDX"
+  "$DEF_OLD/FINTERLOCKIDX"
+  "$DEF_OLD/FHPGUPGIDX"
+  "$DEF_OLD/FTCCHKDEF"
+  "$DEF_OLD/FTCCOMPTNDEF"
+  "$DEF_OLD/FINTERLOCKDEF"
+  "$DEF_OLD/FHPGUPGDEF"
+  "$DEF_CNV/FTCCHKDEF"
+  "$DEF_CNV/FTCCOMPTNDEF"
+  "$DEF_CNV/FINTERLOCKDEF"
+  "$DEF_CNV/FHPGUPGDEF"
+  "$FILDIR/FDODEF"
+  "$SCADA1/dtein/file/fscd/FSCDIC"
+  "$SCADA/dtein/file/ftmp/FEQRETRY"
+  "$SDATA/FSTATIONNOWBUF"
+  "$SCADA1/data/zabbixlog/NFEQUPSTS"
+  "$SDATA/temp/FPACKDEF"
+  "$FUNCPATH/FPACKCTRL"
+)
+declare -a FDESCS=("中止 (q ENTER)"
+  "sc:テレコン可否チェック定義情報管理"
+  "sc:テレコン完了パターン定義情報管理"
+  "sc:インタロック論理式定義情報管理"
+  "sc:HPGUPG完了パターン定義情報管理"
+  "sc:テレコン可否チェック定義情報"
+  "sc:テレコン完了パターン定義情報"
+  "sc:インタロック論理式定義情報"
+  "sc:HPGUPG完了パターン定義情報"
+  "sc:新）テレコン可否チェック定義情報"
+  "sc:新）テレコン完了パターン定義情報"
+  "sc:新）インタロック論理式定義情報"
+  "sc:新）HPGUPG完了パターン定義情報"
+  "sc:DO定義情報"
+  "sc:ICカードスケジュール"
+  "sc:地震時現場記録データ再実行"
+  "gw:現在値バッファー"
+  "sc:装置状態保存フィアル"
+  "sc:保圧制御定義ファイル"
+  "sc:保圧制御管理ファイル"
+)
+declare -a FINFO=(""
+  "STTCCHKIDX     {int ntcEntry_num; int ntcChk_rec[REC_NUM=10];}   4+4x10=44bytes"
+  "STTCCOMPTNIDX  {int nPtEntry_num; int nPt_rec[REC_NUM=10];}      4+4x10=44bytes"
+  "STINTERLOCKIDX {int nItc_enNum;   int nItc_rec[INLO_RECNUM=50];} 4+4x50=204bytes"
+  "STHPGUPGIDX    {int nPtEntry_num; int nPt_rec[REC_NUM=10];}      4+4x10=44bytes"
+  "FBCHDEFF{char cPsbl_itm[32][8]} 8x32=256bytes"
+  "STTCOMPTNDEF{int nWatchTime; PTNDEF stptDeff[32]} PTNDEF{short shPtSv_flg; short shPtSv_cond; char cPtSv_num[8]} (2+2+8)x32=384,+4=388"
+  "STINTERLOCKDEF{INDEFF stIndef[64]} INDEFF{int nItm_flg; char cItm_ino[8]} (4+8)x64=768"
+  "STHPGUPGDEF{int nType; char chSVno[4][4][8]} 4+(4x4x8)=132bytes"
+  "FBCHDEFF{char cPsbl_itm[32][8]} 8x32=256bytes"
+  "STTCCOMPTNDEF10{STTCOMPTNDEF stptDeff10[10]} STTCOMPTNDEF{int nWatchTime; PTNDEF stptDeff[32]} PTNDEF{short shPtSv_flg; short shPtSv_cond; char cPtSv_num[8]} (2+2+8)x32=384,+4=388,x10=3880bytes"
+  "STINTERLOCKDEF50{STINTERLLOCKDEF stIndef50[50]} STINTERLOCKDEF{INDEFF stIndef[64]} INDEFF{int nItm_flg; char cItm_ino[8]} (4+8)x64=768,x50=38400bytes"
+  "STHPGUPGDEF{int nType; char chSVno[4][4][8]} 4+(4x4x8)=132bytes"
+  "sc:DO定義情報"
+  "TFSCDIC long recMng[(FSCDICMAX-1)/32+1]; 4x16=64bytes(header)→512bits on/off records(FSCDICMAX=500)"
+  "sc:地震時現場記録データ再実行"
+  "gw:現在値バッファー"
+  "nzabbixlog TEQUPSTS"
+  "STFPACKDEF {STPACKDEF_S stPackDef_s[CMAX_SB_COUNT];]} STPACKDEF_S {STPACKDEF_M stPackDef_m[MINS_NUM];} STPACKDEF_M {STPACKDEF stPackDef_l[LINS_NUM];} STPACKDEF {...}"
+  "SFTPACKCTRL {STPACKCTRL_HEAD stPackCtrl_head; STPACKCTRL_DATA stPackCtrl_data[A_PACK_MAX];}"
+)
+
+# 1:echo only
+function runXxd() {
+  if [[ "$xL" = "0" ]]; then
+    echo " xxd -c $xC -g $xG -s $xS $fnameExist"
+    if [[ "$1" != "p" ]]; then
+      xxd -c $xC -g $xG -s $xS $fnameExist | more
+    fi
+  else
+    echo " xxd -l $xL -c $xC -g $xG -s $xS $fnameExist"
+    if [[ "$1" != "p" ]]; then
+      xxd -l $xL -c $xC -g $xG -s $xS $fnameExist
+    fi
+  fi
+}
+
+# main menu - list of files
+if [ $# -lt 1 ]; then
+  cy=$C_YELLOW
+  cg=$C_GREEN
+  cb=$C_BLUE
+  echo -e "(CLI)${cg}fnf$C_N file_number $cb(p: print only)$C_N"
+  fn=0
+  for f in "${FPATHS[@]}"; do
+    printf "%2s)$cy%-36s $cg%s $C_N\n" $fn "${FDESCS[$fn]}" "${FPATHS[$fn]}"
+    case $fn in
+      0|4|8|12|13|16|17)
+      echo -e "$cb--------------------------------------------------------------------------------$C_N";;
+    esac
+    ((fn++)) 
+  done
+  echo -e ">>ENTER (-)file_number (with operation ${cy}rm$C_N:remove, ${cy}bk$C_N:backup, ${cy}re$C_N:recover) in CLI" 
+  printf ">>"
+  read -n 3 fid
+  echo ""
+else
+  fid=$1
+fi
+
+if [[ "$fid" = "q" ]]; then
+  exit 0;
+fi
+if ! [[ "$fid" =~ ^-?[0-9]+$ ]]; then
+  echo "The input '$fid' is NOT a number."
+  exit -1
+fi
+
+if [ $fid -lt 0 ]; then
+  reverse=1
+  fid=$((-fid))
+else
+  reverse=0
+fi
+
+# xxd arguments
+# xG: Grouping(2), xC: Columns(16), xL: display Length
+case $fid in
+  0)      exit 0;; 
+  1|2|4)  xG=4; xC=44;  xL=880;;
+# -c 204
+  3)      xG=4; xC=51; xL=1020;;
+# -c 256
+  5|9)    xG=4; xC=32; xL=1208;;
+# -c 388だが、上限が256のため半分の194とする(旧フォーマット)
+  6|10)   xG=2; xC=36; xL=1200;;
+# 7) -c 384だが、上限が256のため半分の192とする(旧フォーマット)
+# 11)-c 768だが、上限が256のため1/4の192とする(旧フォーマット)
+  7|11)   xG=4; xC=24; xL=1224;;
+  8|12)   xG=4; xC=33; xL=1212;;
+# -c 272
+  13)     xG=2; xC=136; xL=0;;
+# -c 64 header size
+  14)     xG=4; xC=32;  xL=1024;;
+# -c 76 header size
+  17)     xG=4; xC=38;  xL=1024;;
+# -c 124 record size
+  18)     xG=4; xC=31;  xL=1024;;
+  19)     xG=4; xC=20;  xL=1024;;
+  *)      xG=2; xC=16;  xL=512;;
+esac
+
+hostnm=$(hostname)
+fdesc=${FDESCS[$fid]}
+if [ ! "${hostnm:2:2}" = "${fdesc:0:2}" ]; then
+  echo "->Different host: ${fdesc:0:2}"
+  exit -1
+fi
+
+if [ ! $fid -lt ${#FPATHS[@]} ]; then
+  echo Out of range. ${#FPATHS[@]} files!  
+  exit 1
+fi
+
+fname=${FPATHS[$fid]}
+fnameExist=$fname
+fsz=$(stat -c %s "$fnameExist")
+if [[ "$reverse" == "1" && "$xL" -lt "$fsz" ]]; then
+  xS=$((fsz - xL))
+else
+  xS=0
+fi
+
+# print path only
+if [[ "$2" = "p" ]]; then
+  echo $fname
+  ls -la $fname
+  runXxd $2
+  exit 0
+fi
+
+if [ ! -f $fname ]; then
+  echo File $fname NOT exist!
+  if [ ! -f $fname.bak ]; then
+    exit -1
+  else
+    fnameExist=$fname.bak
+    echo Backup file $fnameExist exists.
+  fi
+fi
+
+ls -lha $fnameExist
+echo "＜＜${FDESCS[$fid]}＞＞"
+printf "$C_RED■$C_N ${C_YELLOW}${FDESCS[$fid]}$C_N\n  $C_GREEN${FINFO[$fid]}$C_N\n"
+runXxd
+if [ $# -eq 2 ]; then
+  case $2 in
+    rm) rm -i $fname;;
+    bk) cp -p $fname $fname.bak;;
+    re) cp -p $fname.bak $fname;;
+  esac
+  ls -la --color $fname*
+fi
+[25-08-25 10:38:59] gas@hsscoa[(TDSL) RHEL9.4 ][53349] ~/work/skim/
+$ 
